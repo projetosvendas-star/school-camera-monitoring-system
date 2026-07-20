@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { cameras, schools } from "@/db/schema";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, and } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -14,31 +12,42 @@ export async function GET(req: NextRequest) {
   const schoolId = searchParams.get("schoolId");
   const status = searchParams.get("status");
 
-  const conditions = [eq(cameras.active, true)];
+  let query = supabaseAdmin
+    .from("cameras")
+    .select("id, schoolId:school_id, name, location, ip, status, active, createdAt:created_at, schools!inner(name, type)")
+    .eq("active", true);
+
   if (schoolId) {
-    conditions.push(eq(cameras.schoolId, schoolId));
+    query = query.eq("school_id", schoolId);
   }
   if (status) {
-    conditions.push(eq(cameras.status, status as "online" | "offline" | "manutencao"));
+    query = query.eq("status", status);
   }
 
-  const result = await db
-    .select({
-      id: cameras.id,
-      schoolId: cameras.schoolId,
-      name: cameras.name,
-      location: cameras.location,
-      ip: cameras.ip,
-      status: cameras.status,
-      active: cameras.active,
-      createdAt: cameras.createdAt,
-      schoolName: schools.name,
-      schoolType: schools.type,
-    })
-    .from(cameras)
-    .innerJoin(schools, eq(cameras.schoolId, schools.id))
-    .where(and(...conditions))
-    .orderBy(schools.name, cameras.name);
+  query = query.order("name", { referencedTable: "schools" }).order("name");
 
-  return NextResponse.json({ cameras: result });
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Cameras error:", error);
+    return NextResponse.json({ error: "Erro ao buscar câmeras" }, { status: 500 });
+  }
+
+  const cameras = (data || []).map((c: Record<string, unknown>) => {
+    const schools = c.schools as { name: string; type: string } | null;
+    return {
+      id: c.id,
+      schoolId: c.schoolId,
+      name: c.name,
+      location: c.location,
+      ip: c.ip,
+      status: c.status,
+      active: c.active,
+      createdAt: c.createdAt,
+      schoolName: schools?.name || null,
+      schoolType: schools?.type || null,
+    };
+  });
+
+  return NextResponse.json({ cameras });
 }

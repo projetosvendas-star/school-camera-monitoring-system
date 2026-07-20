@@ -1,8 +1,6 @@
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { cookies } from "next/headers";
+import bcrypt from "bcryptjs";
 
 const SESSION_COOKIE = "sme_session";
 
@@ -12,7 +10,7 @@ export async function createSession(userId: string) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24, // 24 hours
+    maxAge: 60 * 60 * 24,
     path: "/",
   });
 }
@@ -27,21 +25,21 @@ export async function getCurrentUser() {
   const userId = cookieStore.get(SESSION_COOKIE)?.value;
   if (!userId) return null;
 
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select("id, name, email, role, active")
+    .eq("id", userId)
+    .limit(1)
+    .single();
 
-  if (result.length === 0) return null;
+  if (error || !data) return null;
 
-  const user = result[0];
   return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-    active: user.active,
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    role: data.role,
+    active: data.active,
   };
 }
 

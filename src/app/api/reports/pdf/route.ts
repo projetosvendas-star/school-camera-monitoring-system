@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { tickets, schools, users, dailyReports } from "@/db/schema";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
@@ -26,7 +24,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const dateFrom = searchParams.get("dateFrom");
   const dateTo = searchParams.get("dateTo");
-  const type = searchParams.get("type") || "tickets"; // tickets | daily
+  const type = searchParams.get("type") || "tickets";
   const status = searchParams.get("status");
 
   if (!dateFrom || !dateTo) {
@@ -40,30 +38,16 @@ export async function GET(req: NextRequest) {
     const doc = new jsPDF() as jsPDFWithAutoTable;
     const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Header
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("SME - Secretaria Municipal de Educação", pageWidth / 2, 20, {
-      align: "center",
-    });
+    doc.text("SME - Secretaria Municipal de Educação", pageWidth / 2, 20, { align: "center" });
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
-    doc.text("Sistema de Monitoramento de Câmeras", pageWidth / 2, 28, {
-      align: "center",
-    });
+    doc.text("Sistema de Monitoramento de Câmeras", pageWidth / 2, 28, { align: "center" });
 
-    // Period
     doc.setFontSize(10);
-    const formatDate = (d: string) => {
-      const date = new Date(d);
-      return date.toLocaleDateString("pt-BR");
-    };
-    doc.text(
-      `Período: ${formatDate(dateFrom)} a ${formatDate(dateTo)}`,
-      pageWidth / 2,
-      36,
-      { align: "center" }
-    );
+    const formatDate = (d: string) => new Date(d).toLocaleDateString("pt-BR");
+    doc.text(`Período: ${formatDate(dateFrom)} a ${formatDate(dateTo)}`, pageWidth / 2, 36, { align: "center" });
     doc.text(
       `Gerado em: ${new Date().toLocaleDateString("pt-BR")} às ${new Date().toLocaleTimeString("pt-BR")}`,
       pageWidth / 2,
@@ -74,76 +58,57 @@ export async function GET(req: NextRequest) {
     let startY = 50;
 
     if (type === "tickets") {
-      // Tickets report
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("Relatório de Chamados", pageWidth / 2, startY, {
-        align: "center",
-      });
+      doc.text("Relatório de Chamados", pageWidth / 2, startY, { align: "center" });
       startY += 10;
 
-      const conditions = [
-        gte(tickets.createdAt, new Date(dateFrom)),
-        lte(tickets.createdAt, new Date(dateTo + "T23:59:59")),
-      ];
+      let ticketQuery = supabaseAdmin
+        .from("tickets")
+        .select("ticket_number, title, status, priority, created_at, closed_at, schools!inner(name), opened_user:users!opened_by(name)")
+        .gte("created_at", new Date(dateFrom).toISOString())
+        .lte("created_at", new Date(dateTo + "T23:59:59").toISOString())
+        .order("created_at", { ascending: false });
+
       if (status) {
-        conditions.push(eq(tickets.status, status as "aberto" | "em_analise" | "fechado" | "aguardando"));
+        ticketQuery = ticketQuery.eq("status", status);
       }
 
-      const ticketData = await db
-        .select({
-          ticketNumber: tickets.ticketNumber,
-          title: tickets.title,
-          status: tickets.status,
-          priority: tickets.priority,
-          schoolName: schools.name,
-          openedByName: sql<string>`open_user.name`,
-          createdAt: tickets.createdAt,
-          closedAt: tickets.closedAt,
-        })
-        .from(tickets)
-        .innerJoin(schools, eq(tickets.schoolId, schools.id))
-        .leftJoin(sql`users as open_user`, sql`open_user.id = ${tickets.openedBy}`)
-        .where(and(...conditions))
-        .orderBy(desc(tickets.createdAt));
+      const { data: ticketData } = await ticketQuery;
 
-      // Summary
-      const totalTickets = ticketData.length;
-      const abertos = ticketData.filter((t) => t.status === "aberto").length;
-      const emAnalise = ticketData.filter((t) => t.status === "em_analise").length;
-      const fechados = ticketData.filter((t) => t.status === "fechado").length;
-      const aguardando = ticketData.filter((t) => t.status === "aguardando").length;
+      const statusLabels: Record<string, string> = {
+        aberto: "Aberto", em_analise: "Em Análise", fechado: "Fechado", aguardando: "Aguardando",
+      };
+      const priorityLabels: Record<string, string> = {
+        baixa: "Baixa", media: "Média", alta: "Alta", critica: "Crítica",
+      };
+
+      const tickets = ticketData || [];
+      const abertos = tickets.filter((t: { status: string }) => t.status === "aberto").length;
+      const emAnalise = tickets.filter((t: { status: string }) => t.status === "em_analise").length;
+      const fechados = tickets.filter((t: { status: string }) => t.status === "fechado").length;
+      const aguardando = tickets.filter((t: { status: string }) => t.status === "aguardando").length;
 
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`Total de Chamados: ${totalTickets}`, 14, startY);
+      doc.text(`Total de Chamados: ${tickets.length}`, 14, startY);
       startY += 5;
       doc.text(`Abertos: ${abertos} | Em Análise: ${emAnalise} | Fechados: ${fechados} | Aguardando: ${aguardando}`, 14, startY);
       startY += 8;
 
-      const statusLabels: Record<string, string> = {
-        aberto: "Aberto",
-        em_analise: "Em Análise",
-        fechado: "Fechado",
-        aguardando: "Aguardando",
-      };
-
-      const priorityLabels: Record<string, string> = {
-        baixa: "Baixa",
-        media: "Média",
-        alta: "Alta",
-        critica: "Crítica",
-      };
-
-      const tableData = ticketData.map((t) => [
-        t.ticketNumber,
-        t.schoolName,
-        t.title.substring(0, 40),
-        statusLabels[t.status] || t.status,
-        priorityLabels[t.priority] || t.priority,
-        t.openedByName,
-        t.createdAt ? new Date(t.createdAt).toLocaleDateString("pt-BR") : "-",
-      ]);
+      const tableData = tickets.map((t: Record<string, unknown>) => {
+        const schools = t.schools as { name: string } | null;
+        const openedUser = t.opened_user as { name: string } | null;
+        return [
+          t.ticket_number,
+          schools?.name || "-",
+          (t.title as string)?.substring(0, 40) || "-",
+          statusLabels[t.status as string] || t.status,
+          priorityLabels[t.priority as string] || t.priority,
+          openedUser?.name || "-",
+          t.created_at ? new Date(t.created_at as string).toLocaleDateString("pt-BR") : "-",
+        ];
+      });
 
       doc.autoTable({
         startY,
@@ -155,44 +120,30 @@ export async function GET(req: NextRequest) {
         margin: { top: startY },
       });
     } else {
-      // Daily reports
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("Relatório Diário de Monitoramento", pageWidth / 2, startY, {
-        align: "center",
-      });
+      doc.text("Relatório Diário de Monitoramento", pageWidth / 2, startY, { align: "center" });
       startY += 10;
 
-      const conditions = [
-        gte(dailyReports.reportDate, new Date(dateFrom)),
-        lte(dailyReports.reportDate, new Date(dateTo + "T23:59:59")),
-      ];
+      const { data: reportData } = await supabaseAdmin
+        .from("daily_reports")
+        .select("report_date, is_normal, observations, cameras_online, cameras_offline, cameras_maintenance, schools!inner(name), users!inner(name)")
+        .gte("report_date", new Date(dateFrom).toISOString())
+        .lte("report_date", new Date(dateTo + "T23:59:59").toISOString())
+        .order("report_date", { ascending: false });
 
-      const reportData = await db
-        .select({
-          reportDate: dailyReports.reportDate,
-          isNormal: dailyReports.isNormal,
-          observations: dailyReports.observations,
-          camerasOnline: dailyReports.camerasOnline,
-          camerasOffline: dailyReports.camerasOffline,
-          camerasMaintenance: dailyReports.camerasMaintenance,
-          schoolName: schools.name,
-          technicianName: users.name,
-        })
-        .from(dailyReports)
-        .innerJoin(schools, eq(dailyReports.schoolId, schools.id))
-        .innerJoin(users, eq(dailyReports.technicianId, users.id))
-        .where(and(...conditions))
-        .orderBy(desc(dailyReports.reportDate));
-
-      const tableData = reportData.map((r) => [
-        new Date(r.reportDate).toLocaleDateString("pt-BR"),
-        r.schoolName,
-        r.isNormal ? "Normal" : "Irregular",
-        `${r.camerasOnline}/${r.camerasOffline}/${r.camerasMaintenance}`,
-        r.observations || "-",
-        r.technicianName,
-      ]);
+      const tableData = (reportData || []).map((r: Record<string, unknown>) => {
+        const schools = r.schools as { name: string } | null;
+        const users = r.users as { name: string } | null;
+        return [
+          r.report_date ? new Date(r.report_date as string).toLocaleDateString("pt-BR") : "-",
+          schools?.name || "-",
+          r.is_normal ? "Normal" : "Irregular",
+          `${r.cameras_online}/${r.cameras_offline}/${r.cameras_maintenance}`,
+          r.observations || "-",
+          users?.name || "-",
+        ];
+      });
 
       doc.autoTable({
         startY,
@@ -205,7 +156,6 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Footer
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);

@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { schools } from "@/db/schema";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, ilike, and } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser();
@@ -14,21 +12,25 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get("type");
   const search = searchParams.get("search");
 
-  let query = db.select().from(schools).where(eq(schools.active, true));
+  let query = supabaseAdmin
+    .from("schools")
+    .select("*")
+    .eq("active", true)
+    .order("name");
 
-  const conditions = [eq(schools.active, true)];
   if (type) {
-    conditions.push(eq(schools.type, type));
+    query = query.eq("type", type);
   }
   if (search) {
-    conditions.push(ilike(schools.name, `%${search}%`));
+    query = query.ilike("name", `%${search}%`);
   }
 
-  const result = await db
-    .select()
-    .from(schools)
-    .where(and(...conditions))
-    .orderBy(schools.name);
+  const { data, error } = await query;
 
-  return NextResponse.json({ schools: result });
+  if (error) {
+    console.error("Schools error:", error);
+    return NextResponse.json({ error: "Erro ao buscar escolas" }, { status: 500 });
+  }
+
+  return NextResponse.json({ schools: data });
 }

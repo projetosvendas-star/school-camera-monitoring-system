@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { ticketHistory, users } from "@/db/schema";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, desc, sql } from "drizzle-orm";
 
 export async function GET(
   req: NextRequest,
@@ -15,21 +13,30 @@ export async function GET(
 
   const { id } = await params;
 
-  const result = await db
-    .select({
-      id: ticketHistory.id,
-      action: ticketHistory.action,
-      comment: ticketHistory.comment,
-      previousStatus: ticketHistory.previousStatus,
-      newStatus: ticketHistory.newStatus,
-      createdAt: ticketHistory.createdAt,
-      userName: users.name,
-      userRole: users.role,
-    })
-    .from(ticketHistory)
-    .innerJoin(users, eq(ticketHistory.userId, users.id))
-    .where(eq(ticketHistory.ticketId, id))
-    .orderBy(desc(ticketHistory.createdAt));
+  const { data, error } = await supabaseAdmin
+    .from("ticket_history")
+    .select("id, action, comment, previous_status, new_status, created_at, users!inner(name, role)")
+    .eq("ticket_id", id)
+    .order("created_at", { ascending: false });
 
-  return NextResponse.json({ history: result });
+  if (error) {
+    console.error("Ticket history error:", error);
+    return NextResponse.json({ error: "Erro ao buscar histórico" }, { status: 500 });
+  }
+
+  const history = (data || []).map((h: Record<string, unknown>) => {
+    const users = h.users as { name: string; role: string } | null;
+    return {
+      id: h.id,
+      action: h.action,
+      comment: h.comment,
+      previousStatus: h.previous_status,
+      newStatus: h.new_status,
+      createdAt: h.created_at,
+      userName: users?.name || null,
+      userRole: users?.role || null,
+    };
+  });
+
+  return NextResponse.json({ history });
 }

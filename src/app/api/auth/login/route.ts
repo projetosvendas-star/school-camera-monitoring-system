@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { createSession, verifyPassword } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
@@ -16,20 +14,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
+    const { data: user, error } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .limit(1)
+      .single();
 
-    if (result.length === 0) {
+    if (error || !user) {
       return NextResponse.json(
         { error: "Credenciais inválidas" },
         { status: 401 }
       );
     }
-
-    const user = result[0];
 
     if (!user.active) {
       return NextResponse.json(

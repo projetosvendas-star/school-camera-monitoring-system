@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/db";
-import { tickets, ticketHistory } from "@/db/schema";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getCurrentUser } from "@/lib/auth";
-import { eq } from "drizzle-orm";
 
 export async function GET(
   req: NextRequest,
@@ -15,17 +13,18 @@ export async function GET(
 
   const { id } = await params;
 
-  const result = await db
-    .select()
-    .from(tickets)
-    .where(eq(tickets.id, id))
-    .limit(1);
+  const { data, error } = await supabaseAdmin
+    .from("tickets")
+    .select("*")
+    .eq("id", id)
+    .limit(1)
+    .single();
 
-  if (result.length === 0) {
+  if (error || !data) {
     return NextResponse.json({ error: "Chamado não encontrado" }, { status: 404 });
   }
 
-  return NextResponse.json({ ticket: result[0] });
+  return NextResponse.json({ ticket: data });
 }
 
 export async function PATCH(
@@ -41,41 +40,45 @@ export async function PATCH(
   const body = await req.json();
   const { status, taticoParecer, adminParecer, comment } = body;
 
-  const existing = await db
-    .select()
-    .from(tickets)
-    .where(eq(tickets.id, id))
-    .limit(1);
+  const { data: existing, error: fetchError } = await supabaseAdmin
+    .from("tickets")
+    .select("*")
+    .eq("id", id)
+    .limit(1)
+    .single();
 
-  if (existing.length === 0) {
+  if (fetchError || !existing) {
     return NextResponse.json({ error: "Chamado não encontrado" }, { status: 404 });
   }
 
-  const ticket = existing[0];
-  const previousStatus = ticket.status;
+  const previousStatus = existing.status;
 
-  // Update ticket
   const updateData: Record<string, unknown> = {
-    updatedAt: new Date(),
+    updated_at: new Date().toISOString(),
   };
 
   if (status) {
     updateData.status = status;
     if (status === "fechado" || status === "aguardando") {
-      updateData.closedBy = user.id;
-      updateData.closedAt = new Date();
+      updateData.closed_by = user.id;
+      updateData.closed_at = new Date().toISOString();
     }
   }
-  if (taticoParecer !== undefined) updateData.taticoParecer = taticoParecer;
-  if (adminParecer !== undefined) updateData.adminParecer = adminParecer;
+  if (taticoParecer !== undefined) updateData.tatico_parecer = taticoParecer;
+  if (adminParecer !== undefined) updateData.admin_parecer = adminParecer;
 
-  const [updated] = await db
-    .update(tickets)
-    .set(updateData)
-    .where(eq(tickets.id, id))
-    .returning();
+  const { data: updated, error: updateError } = await supabaseAdmin
+    .from("tickets")
+    .update(updateData)
+    .eq("id", id)
+    .select()
+    .single();
 
-  // Add history entry
+  if (updateError) {
+    console.error("Update ticket error:", updateError);
+    return NextResponse.json({ error: "Erro ao atualizar chamado" }, { status: 500 });
+  }
+
   const actionMap: Record<string, string> = {
     em_analise: "Encaminhado para análise tática",
     fechado: "Chamado fechado",
@@ -83,13 +86,13 @@ export async function PATCH(
     aberto: "Chamado reaberto",
   };
 
-  await db.insert(ticketHistory).values({
-    ticketId: id,
-    userId: user.id,
+  await supabaseAdmin.from("ticket_history").insert({
+    ticket_id: id,
+    user_id: user.id,
     action: actionMap[status as string] || "Atualização",
     comment: comment || (taticoParecer ? `Parecer tático: ${taticoParecer}` : adminParecer ? `Parecer administrativo: ${adminParecer}` : null),
-    previousStatus: previousStatus,
-    newStatus: status || undefined,
+    previous_status: previousStatus,
+    new_status: status || undefined,
   });
 
   return NextResponse.json({ ticket: updated });
