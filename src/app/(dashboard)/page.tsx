@@ -44,8 +44,7 @@ export default function DashboardPage() {
 
   if (!stats) return null;
 
-  const cameraTotal = stats.cameras.total || 1;
-  const onlinePercent = Math.round((stats.cameras.online / cameraTotal) * 100);
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -73,26 +72,6 @@ export default function DashboardPage() {
               <p className="mt-1 text-3xl font-extrabold text-gray-900">{stats.schools}</p>
             </div>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-2xl transition-transform group-hover:scale-110">🏫</div>
-          </div>
-        </div>
-
-        <div className="glass-card group rounded-2xl p-5 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-400">Câmeras</p>
-              <p className="mt-1 text-3xl font-extrabold text-gray-900">{stats.cameras.total}</p>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-xs font-semibold text-emerald-600">{stats.cameras.online} online</span>
-                <span className="text-xs font-semibold text-red-500">{stats.cameras.offline} offline</span>
-              </div>
-            </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-2xl transition-transform group-hover:scale-110">📹</div>
-          </div>
-          <div className="mt-3">
-            <div className="h-2 overflow-hidden rounded-full bg-gray-100">
-              <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all" style={{ width: `${onlinePercent}%` }} />
-            </div>
-            <p className="mt-1 text-right text-xs font-semibold text-gray-400">{onlinePercent}% online</p>
           </div>
         </div>
 
@@ -131,31 +110,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Camera Status + Recent Tickets */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="glass-card rounded-2xl p-5 shadow-sm">
-          <h2 className="mb-4 text-base font-bold text-gray-800">Status das Câmeras</h2>
-          <div className="space-y-4">
-            {[
-              { label: "Online", count: stats.cameras.online, color: "bg-emerald-500" },
-              { label: "Offline", count: stats.cameras.offline, color: "bg-red-500" },
-              { label: "Manutenção", count: stats.cameras.maintenance, color: "bg-amber-500" },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-3">
-                <div className={`h-3 w-3 rounded-full ${item.color}`} />
-                <span className="w-24 text-sm text-gray-600">{item.label}</span>
-                <div className="flex-1">
-                  <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
-                    <div className={`h-full rounded-full ${item.color}`} style={{ width: `${(item.count / cameraTotal) * 100}%` }} />
-                  </div>
-                </div>
-                <span className="w-8 text-right text-sm font-bold text-gray-700">{item.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="glass-card rounded-2xl p-5 shadow-sm">
+      {/* Recent Tickets */}
+      <div className="glass-card rounded-2xl p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-bold text-gray-800">Chamados Recentes</h2>
             <Link href="/tickets" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">Ver todos →</Link>
@@ -183,7 +139,6 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Quick Actions */}
       <div className="glass-card rounded-2xl p-5 shadow-sm">
@@ -212,13 +167,6 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-bold text-purple-800">Ver Chamados</p>
               <p className="text-[11px] text-purple-500">Acompanhar chamados</p>
-            </div>
-          </Link>
-          <Link href="/cameras" className="flex items-center gap-3 rounded-xl border border-amber-100 bg-gradient-to-br from-amber-50 to-orange-50 p-4 transition-all hover:shadow-md hover:-translate-y-0.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-lg">📹</span>
-            <div>
-              <p className="text-sm font-bold text-amber-800">Câmeras</p>
-              <p className="text-[11px] text-amber-500">Status das câmeras</p>
             </div>
           </Link>
           {user?.role === "administrativo" && (
