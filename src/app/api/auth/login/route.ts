@@ -5,11 +5,11 @@ import { createSession, verifyPassword } from "@/lib/auth";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, password } = body;
+    const { name, password } = body;
 
-    if (!email || !password) {
+    if (!name || !password) {
       return NextResponse.json(
-        { error: "Email e senha são obrigatórios" },
+        { error: "Nome e senha são obrigatórios" },
         { status: 400 }
       );
     }
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const { data: user, error } = await supabaseAdmin
       .from("users")
       .select("*")
-      .eq("email", email)
+      .eq("name", name)
       .limit(1)
       .single();
 

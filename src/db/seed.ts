@@ -33,9 +33,9 @@ async function seed() {
   const hashedPassword = await bcrypt.hash("123456", 10);
 
   const defaultUsers = [
-    { name: "Técnico Monitoramento", email: "tecnico@sme.local", password: hashedPassword, role: "tecnico_monitoramento" },
-    { name: "Tático Operador", email: "tatico@sme.local", password: hashedPassword, role: "tatico" },
-    { name: "Administrativo SME", email: "admin@sme.local", password: hashedPassword, role: "administrativo" },
+    { name: "admin", email: "admin", password: hashedPassword, role: "administrativo" },
+    { name: "tecnico", email: "tecnico", password: hashedPassword, role: "tecnico_monitoramento" },
+    { name: "tatico", email: "tatico", password: hashedPassword, role: "tatico" },
   ];
 
   for (const user of defaultUsers) {
