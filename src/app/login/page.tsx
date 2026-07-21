@@ -39,90 +39,92 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10 text-4xl backdrop-blur-sm">
-            📹
+    <div className="flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 p-4">
+      {/* Background decoration */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/5 blur-3xl" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-md animate-fade-in">
+        {/* Logo */}
+        <div className="mb-10 text-center">
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-3xl bg-white/10 text-4xl shadow-2xl backdrop-blur-xl">
+            <span className="drop-shadow-lg">📹</span>
           </div>
-          <h1 className="text-3xl font-bold text-white">Monitora SME</h1>
-          <p className="mt-2 text-blue-200">
+          <h1 className="text-4xl font-extrabold tracking-tight text-white drop-shadow-lg">
+            Monitora SME
+          </h1>
+          <p className="mt-2 text-sm font-medium text-blue-200/80">
             Sistema de Monitoramento de Câmeras Escolares
           </p>
         </div>
 
+        {/* Login Card */}
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl bg-white p-8 shadow-2xl"
+          className="glass-card rounded-3xl p-8 shadow-2xl shadow-black/10"
         >
-          <h2 className="mb-6 text-center text-xl font-semibold text-gray-800">
-            Acesse sua conta
+          <h2 className="mb-6 text-center text-lg font-bold text-gray-800">
+            Bem-vindo de volta
           </h2>
 
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <div className="mb-4 animate-scale-in rounded-xl border border-red-200 bg-red-50 p-3 text-center text-sm font-medium text-red-600">
               {error}
             </div>
           )}
 
-          <div className="mb-4">
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              placeholder="seu.email@sme.local"
-              required
-            />
-          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-modern"
+                placeholder="seu.email@sme.local"
+                required
+              />
+            </div>
 
-          <div className="mb-6">
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Senha
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-3 transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              placeholder="••••••"
-              required
-            />
+            <div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500">
+                Senha
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-modern"
+                placeholder="••••••••"
+                required
+              />
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            className="btn-primary mt-6 w-full py-3 text-base"
           >
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Entrando...
+              </>
+            ) : (
+              "Entrar"
+            )}
           </button>
-
-          <div className="mt-6 rounded-lg bg-gray-50 p-4">
-            <p className="mb-2 text-xs font-medium text-gray-500">
-              Usuários de teste:
-            </p>
-            <div className="space-y-1 text-xs text-gray-600">
-              <p>
-                <strong>Técnico:</strong> tecnico@sme.local
-              </p>
-              <p>
-                <strong>Tático:</strong> tatico@sme.local
-              </p>
-              <p>
-                <strong>Admin:</strong> admin@sme.local
-              </p>
-              <p className="text-gray-400">Senha: 123456</p>
-            </div>
-          </div>
         </form>
       </div>
 
-      <footer className="fixed bottom-0 left-0 right-0 bg-black/20 py-2 text-center backdrop-blur-sm">
-        <p className="text-[10px] font-bold text-white/80">
+      <footer className="fixed bottom-0 left-0 right-0 py-3 text-center">
+        <p className="text-[10px] font-bold text-white/40">
           Desenvolvido pelo Departamento de Tecnologia da SME
         </p>
       </footer>
