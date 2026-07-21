@@ -30,6 +30,11 @@ export async function GET(req: NextRequest) {
   if (priority) query = query.eq("priority", priority);
   if (schoolId) query = query.eq("school_id", schoolId);
 
+  // Técnico só vê seus próprios chamados
+  if (user.role === "tecnico_monitoramento") {
+    query = query.eq("opened_by", user.id);
+  }
+
   const { data, error, count } = await query;
 
   if (error) {

@@ -24,6 +24,11 @@ export async function GET(
     return NextResponse.json({ error: "Chamado não encontrado" }, { status: 404 });
   }
 
+  // Permissões por perfil
+  if (user.role === "tecnico_monitoramento" && data.opened_by !== user.id) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  }
+
   return NextResponse.json({ ticket: data });
 }
 
@@ -49,6 +54,17 @@ export async function PATCH(
 
   if (fetchError || !existing) {
     return NextResponse.json({ error: "Chamado não encontrado" }, { status: 404 });
+  }
+
+  // Permissões por perfil
+  if (user.role === "tecnico_monitoramento" && existing.opened_by !== user.id) {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  }
+  if (user.role === "tecnico_monitoramento" && existing.status !== "aberto") {
+    return NextResponse.json({ error: "Técnico só pode alterar chamados abertos" }, { status: 403 });
+  }
+  if (user.role === "tatico" && existing.status !== "em_analise") {
+    return NextResponse.json({ error: "Tático só pode alterar chamados em análise" }, { status: 403 });
   }
 
   const previousStatus = existing.status;
