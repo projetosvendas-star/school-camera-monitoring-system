@@ -19,7 +19,6 @@ export default function NewTicketPage() {
   const [form, setForm] = useState({
     schoolId: "",
     occurrenceType: "",
-    title: "",
     description: "",
     priority: "media",
   });
@@ -37,10 +36,14 @@ export default function NewTicketPage() {
     setLoading(true);
 
     try {
+      const school = schools.find((s) => s.id === form.schoolId);
+      const occ = OCCURRENCE_TYPES.find((o) => o.value === form.occurrenceType);
+      const autoTitle = `${occ?.label || "Ocorrência"} - ${school?.name || "Escola"}`;
+
       const res = await fetch("/api/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, title: autoTitle }),
       });
 
       const data = await res.json();
@@ -121,20 +124,6 @@ export default function NewTicketPage() {
                 </button>
               ))}
             </div>
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-              Título *
-            </label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="input-modern"
-              placeholder="Ex: Câmera offline no pátio"
-              required
-            />
           </div>
 
           <div>

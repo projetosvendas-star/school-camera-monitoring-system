@@ -92,9 +92,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { schoolId, cameraId, title, description, priority, occurrenceType } = body;
 
-  if (!schoolId || !title || !description) {
+  if (!schoolId || !description) {
     return NextResponse.json(
-      { error: "Escola, título e descrição são obrigatórios" },
+      { error: "Escola e descrição são obrigatórias" },
       { status: 400 }
     );
   }
