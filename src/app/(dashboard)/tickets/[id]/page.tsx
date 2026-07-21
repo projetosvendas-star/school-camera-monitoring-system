@@ -230,7 +230,7 @@ export default function TicketDetailPage({
 
               {/* Tático: provide parecer */}
               {user?.role === "tatico" &&
-                ticket.status === "em_analise" && (
+                (ticket.status === "em_analise" || ticket.status === "aguardando") && (
                   <div className="space-y-3">
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-gray-600">

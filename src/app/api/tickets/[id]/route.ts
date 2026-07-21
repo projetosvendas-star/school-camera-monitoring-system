@@ -28,6 +28,9 @@ export async function GET(
   if (user.role === "tecnico_monitoramento" && data.opened_by !== user.id) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
+  if (user.role === "tatico" && data.status !== "em_analise" && data.status !== "aguardando") {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  }
 
   return NextResponse.json({ ticket: data });
 }
@@ -63,8 +66,8 @@ export async function PATCH(
   if (user.role === "tecnico_monitoramento" && existing.status !== "aberto") {
     return NextResponse.json({ error: "Técnico só pode alterar chamados abertos" }, { status: 403 });
   }
-  if (user.role === "tatico" && existing.status !== "em_analise") {
-    return NextResponse.json({ error: "Tático só pode alterar chamados em análise" }, { status: 403 });
+  if (user.role === "tatico" && existing.status !== "em_analise" && existing.status !== "aguardando") {
+    return NextResponse.json({ error: "Tático só pode alterar chamados em análise ou aguardando" }, { status: 403 });
   }
 
   const previousStatus = existing.status;

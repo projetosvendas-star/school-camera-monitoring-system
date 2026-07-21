@@ -35,6 +35,11 @@ export async function GET(req: NextRequest) {
     query = query.eq("opened_by", user.id);
   }
 
+  // Tático só vê chamados em análise ou aguardando
+  if (user.role === "tatico" && !status) {
+    query = query.in("status", ["em_analise", "aguardando"]);
+  }
+
   const { data, error, count } = await query;
 
   if (error) {
