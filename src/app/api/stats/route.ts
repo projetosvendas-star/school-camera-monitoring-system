@@ -11,8 +11,14 @@ export async function GET() {
   // Técnico: só vê seus próprios dados
   const isTecnico = user.role === "tecnico_monitoramento";
 
-  const ticketQuery = supabaseAdmin.from("tickets").select("status");
+  const ticketQuery = supabaseAdmin.from("tickets").select("status, occurrence_type");
   if (isTecnico) ticketQuery.eq("opened_by", user.id);
+
+  const schoolTicketQuery = supabaseAdmin
+    .from("tickets")
+    .select("school_id, occurrence_type, schools!inner(name)")
+    .not("occurrence_type", "is", null);
+  if (isTecnico) schoolTicketQuery.eq("opened_by", user.id);
 
   const recentQuery = supabaseAdmin
     .from("tickets")
@@ -21,7 +27,7 @@ export async function GET() {
     .limit(5);
   if (isTecnico) recentQuery.eq("opened_by", user.id);
 
-  const [schoolsRes, camerasRes, ticketsRes, reportsRes, recentRes] = await Promise.all([
+  const [schoolsRes, camerasRes, ticketsRes, reportsRes, recentRes, schoolTicketsRes] = await Promise.all([
     supabaseAdmin.from("schools").select("id", { count: "exact", head: true }).eq("active", true),
     supabaseAdmin.from("cameras").select("status").eq("active", true),
     ticketQuery,
@@ -29,6 +35,7 @@ export async function GET() {
       ? supabaseAdmin.from("daily_reports").select("is_normal, report_date").eq("user_id", user.id).gte("report_date", new Date().toISOString().split("T")[0])
       : supabaseAdmin.from("daily_reports").select("is_normal, report_date").gte("report_date", new Date().toISOString().split("T")[0]),
     recentQuery,
+    schoolTicketQuery,
   ]);
 
   const cameras = camerasRes.data || [];
@@ -49,6 +56,28 @@ export async function GET() {
     fechado: tickets.filter((t: { status: string }) => t.status === "fechado").length,
     aguardando: tickets.filter((t: { status: string }) => t.status === "aguardando").length,
   };
+
+  const occurrenceStats = tickets.reduce((acc: Record<string, number>, t: { occurrence_type: string | null }) => {
+    if (t.occurrence_type) {
+      acc[t.occurrence_type] = (acc[t.occurrence_type] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const schoolOccurrences = (schoolTicketsRes.data || []).reduce(
+    (acc: Record<string, { name: string; count: number; types: Record<string, number> }>, t: Record<string, unknown>) => {
+      const schools = t.schools as { name: string } | null;
+      const schoolId = t.school_id as string;
+      const occType = t.occurrence_type as string;
+      if (!acc[schoolId]) {
+        acc[schoolId] = { name: schools?.name || "Desconhecida", count: 0, types: {} };
+      }
+      acc[schoolId].count++;
+      acc[schoolId].types[occType] = (acc[schoolId].types[occType] || 0) + 1;
+      return acc;
+    },
+    {}
+  );
 
   const todayReports = {
     total: reports.length,
@@ -73,6 +102,8 @@ export async function GET() {
     schools: schoolsRes.count || 0,
     cameras: cameraStats,
     tickets: ticketStats,
+    occurrenceStats,
+    schoolOccurrences,
     todayReports,
     recentTickets,
   });

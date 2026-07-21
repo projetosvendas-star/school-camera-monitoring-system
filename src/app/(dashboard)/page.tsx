@@ -4,11 +4,14 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import StatusBadge from "@/components/StatusBadge";
 import Link from "next/link";
+import { OCCURRENCE_TYPES, getOccurrenceLabel } from "@/lib/occurrences";
 
 interface Stats {
   schools: number;
   cameras: { total: number; online: number; offline: number; maintenance: number };
   tickets: { total: number; aberto: number; emAnalise: number; fechado: number; aguardando: number };
+  occurrenceStats: Record<string, number>;
+  schoolOccurrences: Record<string, { name: string; count: number; types: Record<string, number> }>;
   todayReports: { total: number; normal: number; irregular: number };
   recentTickets: Array<{
     id: string;
@@ -141,6 +144,79 @@ export default function DashboardPage() {
         </div>
 
       {/* Quick Actions */}
+      {user?.role === "administrativo" && (
+        <>
+          {/* Ocorrências por Tipo */}
+          {Object.keys(stats.occurrenceStats).length > 0 && (
+            <div className="glass-card rounded-2xl p-5 shadow-sm">
+              <h2 className="mb-4 text-base font-bold text-gray-800">Ocorrências por Tipo</h2>
+              <div className="space-y-3">
+                {Object.entries(stats.occurrenceStats)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([type, count]) => {
+                    const total = Object.values(stats.occurrenceStats).reduce((s, v) => s + v, 0);
+                    const pct = Math.round((count / total) * 100);
+                    const occ = OCCURRENCE_TYPES.find((o) => o.value === type);
+                    return (
+                      <div key={type} className="flex items-center gap-3">
+                        <span className="w-6 text-center text-lg">{occ?.icon || "📋"}</span>
+                        <span className="w-44 text-sm font-medium text-gray-700 truncate">{getOccurrenceLabel(type)}</span>
+                        <div className="flex-1">
+                          <div className="h-3 overflow-hidden rounded-full bg-gray-100">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        </div>
+                        <span className="w-12 text-right text-sm font-bold text-gray-700">{count}</span>
+                        <span className="w-10 text-right text-xs text-gray-400">{pct}%</span>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+
+          {/* Ocorrências por Escola */}
+          {Object.keys(stats.schoolOccurrences).length > 0 && (
+            <div className="glass-card rounded-2xl p-5 shadow-sm">
+              <h2 className="mb-4 text-base font-bold text-gray-800">Ocorrências por Escola</h2>
+              <div className="space-y-4">
+                {Object.entries(stats.schoolOccurrences)
+                  .sort(([, a], [, b]) => b.count - a.count)
+                  .slice(0, 10)
+                  .map(([schoolId, data]) => {
+                    const maxCount = Math.max(...Object.values(stats.schoolOccurrences).map((s) => s.count));
+                    const pct = Math.round((data.count / maxCount) * 100);
+                    return (
+                      <div key={schoolId}>
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-sm font-semibold text-gray-700">{data.name}</span>
+                          <span className="text-sm font-bold text-gray-500">{data.count} ocorrência{data.count !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-gray-100">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-500 transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {Object.entries(data.types).map(([type, count]) => (
+                            <span key={type} className="inline-flex items-center gap-0.5 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
+                              {OCCURRENCE_TYPES.find((o) => o.value === type)?.icon} {count}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       <div className="glass-card rounded-2xl p-5 shadow-sm">
         <h2 className="mb-4 text-base font-bold text-gray-800">Ações Rápidas</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

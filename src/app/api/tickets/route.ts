@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   let query = supabaseAdmin
     .from("tickets")
     .select(
-      "id, ticketNumber:ticket_number, title, description, status, priority, taticoParecer:tatico_parecer, adminParecer:admin_parecer, closedAt:closed_at, createdAt:created_at, updatedAt:updated_at, schools!inner(name, type), cameras(name), opened_user:users!opened_by(name), assigned_user:users!assigned_to(name), closed_user:users!closed_by(name)",
+      "id, ticketNumber:ticket_number, title, description, status, priority, taticoParecer:tatico_parecer, adminParecer:admin_parecer, occurrenceType:occurrence_type, closedAt:closed_at, createdAt:created_at, updatedAt:updated_at, schools!inner(name, type), cameras(name), opened_user:users!opened_by(name), assigned_user:users!assigned_to(name), closed_user:users!closed_by(name)",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
@@ -62,6 +62,7 @@ export async function GET(req: NextRequest) {
       priority: t.priority,
       taticoParecer: t.taticoParecer,
       adminParecer: t.adminParecer,
+      occurrenceType: t.occurrenceType,
       closedAt: t.closedAt,
       createdAt: t.createdAt,
       updatedAt: t.updatedAt,
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { schoolId, cameraId, title, description, priority } = body;
+  const { schoolId, cameraId, title, description, priority, occurrenceType } = body;
 
   if (!schoolId || !title || !description) {
     return NextResponse.json(
@@ -111,6 +112,7 @@ export async function POST(req: NextRequest) {
       priority: priority || "media",
       status: "aberto",
       opened_by: user.id,
+      occurrence_type: occurrenceType || null,
     })
     .select()
     .single();

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/components/AuthProvider";
+import { getOccurrenceLabel, getOccurrenceIcon } from "@/lib/occurrences";
 
 interface Ticket {
   id: string;
@@ -12,6 +13,7 @@ interface Ticket {
   description: string;
   status: string;
   priority: string;
+  occurrenceType: string | null;
   schoolName: string;
   schoolType: string;
   cameraName: string | null;
@@ -182,6 +184,12 @@ export default function TicketsPage() {
                     </span>
                     <StatusBadge status={ticket.status} />
                     <StatusBadge status={ticket.priority} />
+                    {ticket.occurrenceType && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                        <span>{getOccurrenceIcon(ticket.occurrenceType)}</span>
+                        {getOccurrenceLabel(ticket.occurrenceType)}
+                      </span>
+                    )}
                   </div>
                   <h3 className="mt-1.5 text-sm font-bold text-gray-800">
                     {ticket.title}

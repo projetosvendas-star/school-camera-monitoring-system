@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import StatusBadge from "@/components/StatusBadge";
+import { getOccurrenceLabel, getOccurrenceIcon } from "@/lib/occurrences";
 
 interface Ticket {
   id: string;
@@ -14,6 +15,7 @@ interface Ticket {
   priority: string;
   schoolId: string;
   cameraId: string | null;
+  occurrence_type: string | null;
   taticoParecer: string | null;
   adminParecer: string | null;
   closedAt: string | null;
@@ -143,6 +145,12 @@ export default function TicketDetailPage({
           <h1 className="mt-1 text-xl font-bold text-gray-900">
             {ticket.title}
           </h1>
+          {ticket.occurrence_type && (
+            <div className="mt-2 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm font-medium text-gray-700">
+              <span>{getOccurrenceIcon(ticket.occurrence_type)}</span>
+              <span>{getOccurrenceLabel(ticket.occurrence_type)}</span>
+            </div>
+          )}
           <p className="text-sm text-gray-500">
             Criado em{" "}
             {new Date(ticket.createdAt).toLocaleDateString("pt-BR", {
