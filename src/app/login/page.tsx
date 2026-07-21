@@ -30,7 +30,11 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/");
+      if (data.user?.role === "tecnico_monitoramento" || data.user?.role === "tatico") {
+        router.push("/tickets");
+      } else {
+        router.push("/");
+      }
       router.refresh();
     } catch {
       setError("Erro de conexão");

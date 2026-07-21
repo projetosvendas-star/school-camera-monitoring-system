@@ -16,6 +16,10 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
+    } else if (!loading && user && (user.role === "tecnico_monitoramento" || user.role === "tatico")) {
+      if (window.location.pathname === "/") {
+        router.push("/tickets");
+      }
     }
   }, [user, loading, router]);
 
