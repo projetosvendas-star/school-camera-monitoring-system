@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import { createSession, verifyPassword } from "@/lib/auth";
+import { verifyPassword } from "@/lib/auth";
+
+const SESSION_COOKIE = "sme_session";
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,9 +45,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await createSession(user.id);
-
-    return NextResponse.json({
+    const response = NextResponse.json({
       user: {
         id: user.id,
         name: user.name,
@@ -53,6 +53,16 @@ export async function POST(req: NextRequest) {
         role: user.role,
       },
     });
+
+    response.cookies.set(SESSION_COOKIE, user.id, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24,
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Login error:", error);
     return NextResponse.json(
